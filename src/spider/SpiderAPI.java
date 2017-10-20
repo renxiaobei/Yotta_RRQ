@@ -37,6 +37,7 @@ import spider.bean.TextResult;
 import utils.Log;
 import utils.mysqlUtils;
 import app.Config;
+import app.FragmentSplit;
 import app.error;
 import app.success;
 
@@ -1709,7 +1710,7 @@ public class SpiderAPI {
 				try{
 					List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
 					result=mysql.returnMultipleResult(sqlImageID, paramsImageID);
-					paramsApi.add(Config.IP2+"/YOTTA_RRQ/SpiderAPI/getUnaddImage?imageID="+result.get(0).get("ImageID"));
+					paramsApi.add(Config.IP2+"/Yotta/SpiderAPI/getUnaddImage?imageID="+result.get(0).get("ImageID"));
 					paramsApi.add("http://image.baidu.com/" + disposition.getFileName());
 					try{
 						mysql.addDeleteModify(sqlApi, paramsApi);
@@ -1772,46 +1773,7 @@ public class SpiderAPI {
 	}
 	
 	
-/*	@GET
-	@Path("/createTextFragment")
-	@ApiOperation(value = "创建文本碎片", notes = "创建文本碎片")
-	@ApiResponses(value = {
-			@ApiResponse(code = 402, message = "数据库错误",response=error.class),
-			@ApiResponse(code = 200, message = "正常返回结果", response =success.class) })
-	@Consumes("application/x-www-form-urlencoded" + ";charset=" + "UTF-8")
-	@Produces(MediaType.APPLICATION_JSON + ";charset=" + "UTF-8")
-	public static Response createTextFragment(@ApiParam(value = "FragmentContent", required = true) @QueryParam("FragmentContent") String FragmentContent,@ApiParam(value = "FragmentUrl", required = true) @QueryParam("FragmentUrl") String FragmentUrl) {
-//		Response response = null;
-		
-		try{
-			boolean result=false;
-			mysqlUtils mysql=new mysqlUtils();
-			String sql="insert into "+Config.UNADD_TEXT+"(FragmentContent,FragmentUrl,FragmentPostTime,FragmentScratchTime) values(?,?,?,?);";
-			Date d=new Date();
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			List<Object> params=new ArrayList<Object>();
-			params.add(FragmentContent);
-			params.add(FragmentUrl);
-			params.add(sdf.format(d));
-			params.add(sdf.format(d));
-			try{
-				result=mysql.addDeleteModify(sql, params);
-			}catch(Exception e){
-				e.printStackTrace();
-			}
-		finally {
-			mysql.closeconnection();
-		}
-			if (result) {
-				return Response.status(200).entity(new success("碎片创建成功~")).build();
-			}else{
-				return Response.status(401).entity(new error("碎片创建失败~")).build();
-			}
-	}catch(Exception e){
-		return Response.status(402).entity(new error(e.toString())).build();
-	}
-		
-	}*/
+
 	
 	@GET
 	@Path("/addFacetFragment")
@@ -1821,7 +1783,7 @@ public class SpiderAPI {
 			@ApiResponse(code = 200, message = "正常返回结果", response =success.class) })
 	@Consumes("application/x-www-form-urlencoded" + ";charset=" + "UTF-8")
 	@Produces(MediaType.APPLICATION_JSON + ";charset=" + "UTF-8")
-	public static Response addFacet1TextFragment(@ApiParam(value = "课程名字", required = true) @QueryParam("ClassName") String ClassName,@ApiParam(value = "主题名字", required = true) @QueryParam("TermName") String TermName,@ApiParam(value = "分面名字", required = true) @QueryParam("FacetName") String FacetName,@ApiParam(value = "分面级数", required = true) @QueryParam("FacetLayer") String FacetLayer,@ApiParam(value = "FragmentID", required = true) @QueryParam("FragmentID") String FragmentID) {
+	public static Response addFacetFragment(@ApiParam(value = "课程名字", required = true) @QueryParam("ClassName") String ClassName,@ApiParam(value = "主题名字", required = true) @QueryParam("TermName") String TermName,@ApiParam(value = "分面名字", required = true) @QueryParam("FacetName") String FacetName,@ApiParam(value = "分面级数", required = true) @QueryParam("FacetLayer") String FacetLayer,@ApiParam(value = "FragmentID", required = true) @QueryParam("FragmentID") String FragmentID) {
 //		Response response = null;
 		/**
 		 * 向分面添加碎片
@@ -1833,6 +1795,10 @@ public class SpiderAPI {
 			String sql_query="select * from "+Config.FRAGMENT+" where FragmentID=?";
 			String sql_delete="delete from "+Config.FRAGMENT+" where FragmentID=?";
 			String sql_add="insert into "+Config.ASSEMBLE_FRAGMENT_TABLE+"(FragmentContent,FragmentScratchTime,TermID,TermName,FacetName,FacetLayer,ClassName) values(?,?,?,?,?,?,?);";
+			
+			String sql_addImage="insert into "+Config.ASSEMBLE_IMAGE_TABLE+"(ImageUrl,TermID,TermName,FacetLayer,FacetName,ClassName,ImageScratchTime) values(?,?,?,?,?,?,?);";
+			String sql_addText="insert into "+Config.ASSEMBLE_TEXT_TABLE+"(FragmentContent,FragmentScratchTime,TermID,TermName,FacetName,FacetLayer,ClassName) values(?,?,?,?,?,?,?);";
+			
 			List<Object> params_term=new ArrayList<Object>();
 			params_term.add(ClassName);
 			params_term.add(TermName);
@@ -1853,6 +1819,39 @@ public class SpiderAPI {
 				if(result){
 					try{
 						mysql.addDeleteModify(sql_delete, params_fragment);
+						
+						String Content=String.valueOf(fragmentinfo.get(0).get("FragmentContent"));
+						List<Object> params_addText=new ArrayList<Object>();
+						params_addText.add(FragmentSplit.getTextFromHtml(Content));
+						params_addText.add(fragmentinfo.get(0).get("FragmentScratchTime"));
+						params_addText.add(results_term.get(0).get("TermID"));
+						params_addText.add(TermName);
+						params_addText.add(FacetName);
+						params_addText.add(FacetLayer);
+						params_addText.add(ClassName);
+						try{
+							mysql.addDeleteModify(sql_addText, params_addText);
+						}catch(Exception e){
+							e.printStackTrace();
+						}
+						
+						
+						if(Content.indexOf("src")>0){
+							List<Object> params_addImage=new ArrayList<Object>();
+							params_addImage.add(FragmentSplit.getImageFromHtml(Content));
+							params_addImage.add(results_term.get(0).get("TermID"));
+							params_addImage.add(TermName);
+							params_addImage.add(FacetLayer);
+							params_addImage.add(FacetName);
+							params_addImage.add(ClassName);
+							params_addImage.add(fragmentinfo.get(0).get("FragmentScratchTime"));
+							try{
+								mysql.addDeleteModify(sql_addImage, params_addImage);
+							}catch(Exception e){
+								e.printStackTrace();
+							}
+						}
+						
 					}catch(Exception e){
 						e.printStackTrace();
 					}
@@ -1875,67 +1874,7 @@ public class SpiderAPI {
 	}
 	
 	
-/*	@GET
-	@Path("/addFacetImageFragment")
-	@ApiOperation(value = "向分面添加图片碎片", notes = "向分面添加图片碎片")
-	@ApiResponses(value = {
-			@ApiResponse(code = 402, message = "数据库错误",response=error.class),
-			@ApiResponse(code = 200, message = "正常返回结果", response =success.class) })
-	@Consumes("application/x-www-form-urlencoded" + ";charset=" + "UTF-8")
-	@Produces(MediaType.APPLICATION_JSON + ";charset=" + "UTF-8")
-	public static Response addFacet1ImageFragment(@ApiParam(value = "课程名字", required = true) @QueryParam("ClassName") String ClassName,@ApiParam(value = "主题名字", required = true) @QueryParam("TermName") String TermName,@ApiParam(value = "分面名字", required = true) @QueryParam("FacetName") String FacetName,@ApiParam(value = "分面级数", required = true) @QueryParam("FacetLayer") String FacetLayer,@ApiParam(value = "ImageID", required = true) @QueryParam("ImageID") String ImageID) {
-//		Response response = null;
-		
-		try{
-			boolean result=false;
-			mysqlUtils mysql=new mysqlUtils();
-			String sql_term="select * from "+Config.DOMAIN_TOPIC_TABLE+" where ClassName=? and TermName=?";
-			String sql_query="select * from "+Config.UNADD_IMAGE+" where ImageID=?";
-			String sql_delete="delete from "+Config.UNADD_IMAGE+" where ImageID=?";
-			String sql_add="insert into "+Config.ASSEMBLE_IMAGE_TABLE+"(ImageUrl,ImageWidth,ImageHeight,TermID,TermName,TermUrl,FacetLayer,FacetName,ClassName,ImageScratchTime) values(?,?,?,?,?,?,?,?,?,?);";
-			List<Object> params_term=new ArrayList<Object>();
-			params_term.add(ClassName);
-			params_term.add(TermName);
-			List<Object> params_image=new ArrayList<Object>();
-			params_image.add(ImageID);
-			try{
-				List<Map<String, Object>> results_term=mysql.returnMultipleResult(sql_term, params_term);
-				List<Map<String, Object>> imageinfo=mysql.returnMultipleResult(sql_query, params_image);
-				List<Object> params_add=new ArrayList<Object>();
-				params_add.add(imageinfo.get(0).get("ImageUrl"));
-				params_add.add(imageinfo.get(0).get("ImageWidth"));
-				params_add.add(imageinfo.get(0).get("ImageHeight"));
-				params_add.add(results_term.get(0).get("TermID"));
-				params_add.add(TermName);
-				params_add.add(results_term.get(0).get("TermUrl"));
-				params_add.add(FacetLayer);
-				params_add.add(FacetName);
-				params_add.add(ClassName);
-				params_add.add(imageinfo.get(0).get("ImageScratchTime"));
-				result=mysql.addDeleteModify(sql_add, params_add);
-				if(result){
-					try{
-						mysql.addDeleteModify(sql_delete, params_image);
-					}catch(Exception e){
-						e.printStackTrace();
-					}
-				}
-			}catch(Exception e){
-				e.printStackTrace();
-			}
-		finally {
-			mysql.closeconnection();
-		}
-			if (result) {
-				return Response.status(200).entity(new success("碎片添加成功~")).build();
-			}else{
-				return Response.status(401).entity(new error("碎片添加失败~")).build();
-			}
-	}catch(Exception e){
-		return Response.status(402).entity(new error(e.toString())).build();
-	}
-		
-	}*/
+
 	
 	
 	@GET
@@ -1977,41 +1916,7 @@ public class SpiderAPI {
 }
 	
 	
-/*	@GET
-	@Path("/deleteUnaddText")
-	@ApiOperation(value = "删除未挂接的文本", notes = "删除未挂接的文本")
-	@ApiResponses(value = {
-			@ApiResponse(code = 402, message = "数据库错误",response=error.class),
-			@ApiResponse(code = 200, message = "正常返回结果", response =success.class)})
-	@Consumes("application/x-www-form-urlencoded" + ";charset=" + "UTF-8")
-	@Produces(MediaType.APPLICATION_JSON + ";charset=" + "UTF-8")
-	public static Response deleteUnaddText(@ApiParam(value = "FragmentID", required = true) @QueryParam("FragmentID") String FragmentID) {
-		
-		try{
-			boolean result=false;
-			mysqlUtils mysql=new mysqlUtils();
-			String sql="delete from "+Config.UNADD_TEXT+" where FragmentID=?;";
-			List<Object> params=new ArrayList<Object>();
-			params.add(FragmentID);
-			try{
-						result=mysql.addDeleteModify(sql, params);	
-				}		
-			catch(Exception e){
-			e.printStackTrace();
-		}
-		finally {
-			mysql.closeconnection();
-		}
-			if (result) {
-				return Response.status(200).entity(new success("碎片删除成功~")).build();
-			}else{
-				return Response.status(401).entity(new error("碎片删除失败~")).build();
-			}
-	}catch(Exception e){
-		return Response.status(402).entity(new error(e.toString())).build();
-	}
-	
-}*/
+
 	
 	
 	
