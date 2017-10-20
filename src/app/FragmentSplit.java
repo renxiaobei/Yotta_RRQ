@@ -53,7 +53,7 @@ public class FragmentSplit {
 	public static String getTextFromHtml(String htmlStr) {
 		htmlStr = delHTMLTag(htmlStr);
 		htmlStr = htmlStr.replaceAll(" ", "");
-		htmlStr = htmlStr.substring(0, htmlStr.length() - 4);
+		htmlStr = htmlStr.substring(0, htmlStr.length());
 		return htmlStr;
 	}
 

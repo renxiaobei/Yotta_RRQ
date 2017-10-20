@@ -77,8 +77,8 @@ public class Config {
 	
 //	public static String IP1="http://123.139.159.38";
 	public static String IP1="http://localhost";
-//	public static String IP2="http://123.139.159.38:9218";
-	public static String IP2="http://localhost:8080";
+//	public static String IP2="http://123.139.159.38:9218/Yotta";
+	public static String IP2="http://localhost:8080/Yotta";
 	
 	
 	
